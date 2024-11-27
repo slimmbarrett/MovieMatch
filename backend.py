@@ -104,6 +104,15 @@ async def read_root(request: Request):
 async def get_movie(request: UserAnswers):
     """Generate movie recommendation based on user answers"""
     try:
+        # Verify API keys are set
+        if not openai.api_key:
+            logger.error("OpenAI API key is not set")
+            raise HTTPException(status_code=500, detail="OpenAI API key is not configured")
+        
+        if not tmdb.API_KEY:
+            logger.error("TMDB API key is not set")
+            raise HTTPException(status_code=500, detail="TMDB API key is not configured")
+
         # Create cache key from user answers
         cache_key = json.dumps(request.answers, sort_keys=True)
         
@@ -125,30 +134,45 @@ async def get_movie(request: UserAnswers):
             "Return only the movie title, nothing else."
         )
 
-        # Get recommendation from OpenAI
-        response = await openai.ChatCompletion.acreate(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a movie recommendation expert."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=50,
-            temperature=0.7
-        )
+        try:
+            # Get recommendation from OpenAI
+            response = await openai.ChatCompletion.acreate(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a movie recommendation expert."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=50,
+                temperature=0.7
+            )
+            
+            if not response.choices:
+                logger.error("OpenAI API returned no choices")
+                raise HTTPException(status_code=500, detail="Failed to get movie recommendation")
+                
+            movie_title = response.choices[0].message.content.strip()
+            logger.info(f"OpenAI suggested movie: {movie_title}")
+            
+        except Exception as e:
+            logger.error(f"OpenAI API error: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error communicating with OpenAI API")
 
-        movie_title = response.choices[0].message.content.strip()
-        
-        # Get detailed movie information
-        movie_details = await get_movie_details(movie_title)
-        
-        # Cache the result
-        movie_cache[cache_key] = movie_details
-        
-        # Log successful recommendation
-        logger.info(f"Successfully recommended movie: {movie_title}")
-        
-        return movie_details
+        try:
+            # Get detailed movie information
+            movie_details = await get_movie_details(movie_title)
+            
+            # Cache the result
+            movie_cache[cache_key] = movie_details
+            
+            # Log successful recommendation
+            logger.info(f"Successfully recommended movie: {movie_title}")
+            
+            return movie_details
+            
+        except Exception as e:
+            logger.error(f"TMDB API error: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error fetching movie details from TMDB")
 
     except Exception as e:
-        logger.error(f"Error generating recommendation: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error generating movie recommendation")
+        logger.error(f"Unexpected error in get_movie: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
