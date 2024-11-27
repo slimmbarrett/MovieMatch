@@ -12,6 +12,7 @@ import os
 import json
 import logging
 from datetime import datetime
+from pathlib import Path
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +31,13 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI
 app = FastAPI(title="MovieMatch API", version="2.0.0")
 
+# Get the absolute path to the project root directory
+BASE_DIR = Path(__file__).resolve().parent
+
+# Configure static files and templates
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -42,10 +50,6 @@ app.add_middleware(
 # Initialize API keys
 openai.api_key = os.getenv("OPENAI_API_KEY")
 tmdb.API_KEY = os.getenv("TMDB_API_KEY")
-
-# Templates configuration
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Pydantic models
 class UserAnswers(BaseModel):
