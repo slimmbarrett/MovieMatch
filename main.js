@@ -119,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             displayResult(data);
         } catch (error) {
+            console.error('Error:', error);
             alert('Error getting movie recommendation. Please try again.');
             questions[currentQuestion].style.display = 'block';
         } finally {
