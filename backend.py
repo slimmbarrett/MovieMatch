@@ -122,16 +122,24 @@ async def get_movie(request: UserAnswers):
             return movie_cache[cache_key]
 
         # Format prompt for ChatGPT
+        mood = request.answers[0]
+        occasion = request.answers[1]
+        genres = request.answers[2]
+        movie_age = request.answers[3]
+        rating_importance = request.answers[4]
+        acceptable_ratings = request.answers[5]
+
         prompt = (
-            "You are a professional movie critic and recommendation expert. "
-            "Based on the following preferences, recommend ONE specific movie title (no explanations needed):\n"
-            f"1. Mood: {request.answers[0]}\n"
-            f"2. Occasion: {request.answers[1]}\n"
-            f"3. Preferred genres: {', '.join(request.answers[2])}\n"
-            f"4. Movie age preference: {request.answers[3]}\n"
-            f"5. Ratings importance: {request.answers[4]}\n"
-            f"6. Acceptable MPAA ratings: {', '.join(request.answers[5])}\n\n"
-            "Return only the movie title, nothing else."
+            "Hi! I need a movie recommendation for tonight. Here are my preferences:\n\n"
+            f"1. My current mood: {mood}\n"
+            f"2. Viewing occasion: {occasion}\n"
+            f"3. Preferred genres: {', '.join(genres)}\n"
+            f"4. Movie age preference: {movie_age}\n"
+            f"5. Rating importance: {rating_importance}\n"
+            f"6. Acceptable MPAA ratings: {', '.join(acceptable_ratings)}\n\n"
+            "Please recommend one specific movie. "
+            "Reply ONLY with the movie title and year in the format: 'Movie Title (year)'. "
+            "For example: 'The Shawshank Redemption (1994)'. No additional explanations."
         )
 
         try:
@@ -139,7 +147,7 @@ async def get_movie(request: UserAnswers):
             response = await client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a movie recommendation expert."},
+                    {"role": "system", "content": "You are a movie expert. Respond only with the movie title and year in the format 'Title (year)'."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=50,
@@ -149,23 +157,62 @@ async def get_movie(request: UserAnswers):
             if not response.choices:
                 logger.error("OpenAI API returned no choices")
                 raise HTTPException(status_code=500, detail="Failed to get movie recommendation")
-                
-            movie_title = response.choices[0].message.content.strip()
-            logger.info(f"OpenAI suggested movie: {movie_title}")
+            
+            # Extract movie title and year
+            movie_response = response.choices[0].message.content.strip()
+            logger.info(f"OpenAI suggested movie: {movie_response}")
+            
+            # Extract year from response (assuming format "Movie Title (YEAR)")
+            import re
+            year_match = re.search(r'\((\d{4})\)$', movie_response)
+            if year_match:
+                year = year_match.group(1)
+                title = movie_response[:movie_response.rfind('(')].strip()
+            else:
+                title = movie_response
+                year = None
+            
+            logger.info(f"Parsed title: {title}, year: {year}")
             
         except Exception as e:
             logger.error(f"OpenAI API error: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error communicating with OpenAI API: {str(e)}")
 
         try:
-            # Get detailed movie information
-            movie_details = await get_movie_details(movie_title)
+            # Search for movie in TMDB
+            search = tmdb.Search()
+            search_params = {"query": title}
+            if year:
+                search_params["year"] = year
+            
+            response = search.movie(**search_params)
+            
+            if not response.get('results'):
+                # Try searching without year if no results found
+                if year:
+                    response = search.movie(query=title)
+            
+            if not response.get('results'):
+                raise Exception(f"No movie found for title: {title}")
+            
+            # Get the first result
+            movie = response['results'][0]
+            
+            # Create movie details response
+            movie_details = {
+                "title": movie['title'],
+                "year": movie['release_date'][:4] if movie.get('release_date') else year or "N/A",
+                "poster_path": f"https://image.tmdb.org/t/p/w500{movie['poster_path']}" if movie.get('poster_path') else None,
+                "overview": movie.get('overview', ""),
+                "vote_average": movie.get('vote_average', 0),
+                "original_language": movie.get('original_language', "en")
+            }
             
             # Cache the result
             movie_cache[cache_key] = movie_details
             
             # Log successful recommendation
-            logger.info(f"Successfully recommended movie: {movie_title}")
+            logger.info(f"Successfully recommended movie: {movie_details['title']} ({movie_details['year']})")
             
             return movie_details
             
