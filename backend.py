@@ -303,4 +303,8 @@ async def get_movie(request: UserAnswers):
 
     except Exception as e:
         logger.error(f"Error generating recommendation: {str(e)}")
+<<<<<<< HEAD
         raise HTTPException(status_code=500, detail="Error generating movie recommendation")
+=======
+        raise HTTPException(status_code=500, detail="Error generating movie recommendation")
+>>>>>>> cbda723206378d16e653ca843f407eb13924ca36
