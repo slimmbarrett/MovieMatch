@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Request, HTTPException, Depends
+git add .
+git commit -m "Fix logging configuration for Vercel"
+git pushfrom fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
