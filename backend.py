@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-import openai
+from openai import AsyncOpenAI
 import tmdbsimple as tmdb
 from dotenv import load_dotenv
 import os
@@ -46,8 +46,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize API keys
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Initialize API clients
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 tmdb.API_KEY = os.getenv("TMDB_API_KEY")
 
 # Pydantic models
@@ -105,7 +105,7 @@ async def get_movie(request: UserAnswers):
     """Generate movie recommendation based on user answers"""
     try:
         # Verify API keys are set
-        if not openai.api_key:
+        if not os.getenv("OPENAI_API_KEY"):
             logger.error("OpenAI API key is not set")
             raise HTTPException(status_code=500, detail="OpenAI API key is not configured")
         
@@ -136,7 +136,7 @@ async def get_movie(request: UserAnswers):
 
         try:
             # Get recommendation from OpenAI
-            response = await openai.ChatCompletion.acreate(
+            response = await client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a movie recommendation expert."},
@@ -155,7 +155,7 @@ async def get_movie(request: UserAnswers):
             
         except Exception as e:
             logger.error(f"OpenAI API error: {str(e)}")
-            raise HTTPException(status_code=500, detail="Error communicating with OpenAI API")
+            raise HTTPException(status_code=500, detail=f"Error communicating with OpenAI API: {str(e)}")
 
         try:
             # Get detailed movie information
@@ -171,7 +171,7 @@ async def get_movie(request: UserAnswers):
             
         except Exception as e:
             logger.error(f"TMDB API error: {str(e)}")
-            raise HTTPException(status_code=500, detail="Error fetching movie details from TMDB")
+            raise HTTPException(status_code=500, detail=f"Error fetching movie details from TMDB: {str(e)}")
 
     except Exception as e:
         logger.error(f"Unexpected error in get_movie: {str(e)}")
