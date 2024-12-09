@@ -1,297 +1,76 @@
-<<<<<<< HEAD
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Movie Picker</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 20px;
-    }
-    .question {
-      display: none;
-    }
-    .question.active {
-      display: block;
-    }
-    button {
-      margin: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <h1>MovieMatch</h1>
-  <div id="questions">
-    <!-- Вопрос 1 -->
-    <div class="question active" id="question-1">
-      <h3>How are you today?</h3>
-      <button onclick="saveAnswer('Happy')">Happy</button>
-      <button onclick="saveAnswer('Neutral')">Neutral</button>
-      <button onclick="saveAnswer('Sad')">Sad</button>
-    </div>
-    <!-- Вопрос 2 -->
-    <div class="question" id="question-2">
-      <h3>What comes closest to your occasion?</h3>
-      <button onclick="saveAnswer('Just watching a movie by myself.')">Just watching a movie by myself.</button>
-      <button onclick="saveAnswer('Movie Date.')">Movie Date.</button>
-      <button onclick="saveAnswer('Movie Night with friends.')">Movie Night with friends.</button>
-      <button onclick="saveAnswer('Date Night with boyfriend or girlfriend.')">Date Night with boyfriend or girlfriend.</button>
-      <button onclick="saveAnswer('Watching a movie with family or relatives.')">Watching a movie with family or relatives.</button>
-    </div>
-    <!-- Вопрос 3 -->
-    <div class="question" id="question-3">
-      <h3>Please choose up to 3 genres:</h3>
-      <label><input type="checkbox" value="Action"> Action</label>
-      <label><input type="checkbox" value="Comedy"> Comedy</label>
-      <label><input type="checkbox" value="Drama"> Drama</label>
-      <button onclick="saveGenres()">Next</button>
-    </div>
-    <!-- Вопрос 4 -->
-    <div class="question" id="question-4">
-      <h3>How old would you like the movie to be?</h3>
-      <button onclick="saveAnswer('Doesn’t matter.')">Doesn’t matter.</button>
-      <button onclick="saveAnswer('Published in the last 3 years.')">Published in the last 3 years.</button>
-      <button onclick="saveAnswer('Published in the last 5 years.')">Published in the last 5 years.</button>
-      <button onclick="saveAnswer('Published in the last 10 years.')">Published in the last 10 years.</button>
-      <button onclick="saveAnswer('Published in the last 20 years.')">Published in the last 20 years.</button>
-    </div>
-    <!-- Вопрос 5 -->
-    <div class="question" id="question-5">
-      <h3>Is the age-appropriateness rating of the movie important to you?</h3>
-      <button onclick="saveAnswer('Yes')">Yes</button>
-      <button onclick="saveAnswer('No')">No</button>
-    </div>
-    <!-- Вопрос 6 -->
-    <div class="question" id="question-6">
-      <h3>Please select all MPAA ratings you’re okay with:</h3>
-      <label><input type="checkbox" value="G-Rated"> G-Rated</label>
-      <label><input type="checkbox" value="PG-Rated"> PG-Rated</label>
-      <label><input type="checkbox" value="PG-13-Rated"> PG-13-Rated</label>
-      <label><input type="checkbox" value="R-Rated"> R-Rated</label>
-      <button onclick="saveRatings()">Submit</button>
-    </div>
-  </div>
-  <div id="result" style="display:none;">
-    <h3>Your Movie Recommendation:</h3>
-    <p id="movie"></p>
-  </div>
-  <script>
-    const answers = [];
-    let currentQuestion = 1;
-
-    function saveAnswer(answer) {
-      answers.push(answer);
-      showNextQuestion();
-    }
-
-    function saveGenres() {
-      const selectedGenres = Array.from(document.querySelectorAll('#question-3 input:checked')).map(el => el.value);
-      if (selectedGenres.length > 3) {
-        alert("Please select up to 3 genres.");
-        return;
-      }
-      answers.push(selectedGenres);
-      showNextQuestion();
-    }
-
-    function saveRatings() {
-      const selectedRatings = Array.from(document.querySelectorAll('#question-6 input:checked')).map(el => el.value);
-      answers.push(selectedRatings);
-      submitAnswers();
-    }
-
-    function showNextQuestion() {
-      document.getElementById(`question-${currentQuestion}`).classList.remove('active');
-      currentQuestion++;
-      document.getElementById(`question-${currentQuestion}`).classList.add('active');
-    }
-
-    async function submitAnswers() {
-      const response = await fetch('http://127.0.0.1:8000/get-movie', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers })
-      });
-      const result = await response.json();
-      document.getElementById('questions').style.display = 'none';
-      document.getElementById('result').style.display = 'block';
-      document.getElementById('movie').innerText = result.movie;
-    }
-  </script>
-</body>
-</html>
-=======
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MovieMatch - Find Your Perfect Movie</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <header>
             <h1>MovieMatch</h1>
-            <p>Answer a few questions and we'll find the perfect movie for you!</p>
-        </div>
+            <p>Найдите идеальный фильм для вечера</p>
+        </header>
 
-        <div class="progress-bar">
-            <div class="progress"></div>
-        </div>
-
-        <div class="question-container">
-            <!-- Question 1 -->
-            <div class="question active" data-question="0">
-                <h3>How are you today?</h3>
-                <div class="options-grid">
-                    <button class="button" data-option="Happy">Happy</button>
-                    <button class="button" data-option="Neutral">Neutral</button>
-                    <button class="button" data-option="Sad">Sad</button>
-                </div>
-            </div>
-
-            <!-- Question 2 -->
-            <div class="question" data-question="1">
-                <h3>What comes closest to your occasion?</h3>
-                <div class="options-grid">
-                    <button class="button" data-option="Just watching a movie by myself">Solo Movie Night</button>
-                    <button class="button" data-option="Movie Date">Movie Date</button>
-                    <button class="button" data-option="Movie Night with friends">Friends Movie Night</button>
-                    <button class="button" data-option="Date Night with boyfriend or girlfriend">Date Night</button>
-                    <button class="button" data-option="Watching a movie with family or relatives">Family Movie Night</button>
-                </div>
-            </div>
-
-            <!-- Question 3 -->
-            <div class="question" data-question="2">
-                <h3>Please choose up to 3 genres:</h3>
-                <div class="checkbox-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Action"> Action
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Adventure"> Adventure
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Animation"> Animation
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Comedy"> Comedy
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Crime"> Crime
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Documentary"> Documentary
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Drama"> Drama
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Family"> Family
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Fantasy"> Fantasy
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Horror"> Horror
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Mystery"> Mystery
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Romance"> Romance
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Sci-Fi"> Sci-Fi
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Thriller"> Thriller
-                    </label>
-                </div>
-            </div>
-
-            <!-- Question 4 -->
-            <div class="question" data-question="3">
-                <h3>How old would you like the movie to be?</h3>
-                <div class="options-grid">
-                    <button class="button" data-option="Doesn't matter">Any Age</button>
-                    <button class="button" data-option="Published in the last 3 years">Last 3 Years</button>
-                    <button class="button" data-option="Published in the last 5 years">Last 5 Years</button>
-                    <button class="button" data-option="Published in the last 10 years">Last 10 Years</button>
-                    <button class="button" data-option="Published in the last 20 years">Last 20 Years</button>
-                </div>
-            </div>
-
-            <!-- Question 5 -->
-            <div class="question" data-question="4">
-                <h3>Is the age-appropriateness rating important?</h3>
-                <div class="options-grid">
-                    <button class="button" data-option="Yes">Yes</button>
-                    <button class="button" data-option="No">No</button>
-                </div>
-            </div>
-
-            <!-- Question 6 -->
-            <div class="question" data-question="5">
-                <h3>Select acceptable MPAA ratings:</h3>
-                <div class="checkbox-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="G"> G (General Audience)
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="PG"> PG (Parental Guidance)
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="PG-13"> PG-13 (Parental Guidance 13+)
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="R"> R (Restricted)
-                    </label>
-                </div>
+        <div class="search-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Поиск фильма...">
+                <button id="searchButton">Поиск</button>
+                <button id="googleSearchButton">Поиск в Google</button>
             </div>
         </div>
 
-        <div class="loading">
-            <div class="loading-spinner"></div>
-            <p>Finding the perfect movie for you...</p>
-        </div>
-
-        <div class="result">
-            <div class="movie-card">
-                <div class="movie-header">
-                    <img id="movie-poster" class="movie-poster" src="" alt="Movie Poster">
-                    <div class="movie-info">
-                        <h2 id="movie-title"></h2>
-                        <div class="movie-meta">
-                            <span id="movie-release-date"></span>
-                            <span>|</span>
-                            <span id="movie-rating"></span>
-                        </div>
-                        <div id="movie-genres" class="movie-genres"></div>
-                        <p id="movie-overview" class="movie-overview"></p>
+        <div class="recommendation-section">
+            <h2>Подберите фильм по критериям</h2>
+            <div class="questionnaire" id="questionnaire">
+                <div class="question" id="moodQuestion">
+                    <h3>Какое у вас настроение?</h3>
+                    <div class="options">
+                        <button class="option-btn" data-value="happy">Веселое</button>
+                        <button class="option-btn" data-value="sad">Грустное</button>
+                        <button class="option-btn" data-value="excited">Воодушевленное</button>
+                        <button class="option-btn" data-value="relaxed">Расслабленное</button>
+                        <button class="option-btn" data-value="thoughtful">Задумчивое</button>
                     </div>
                 </div>
-                <div class="watch-providers">
-                    <h3>Where to Watch</h3>
-                    <div id="watch-providers" class="provider-list"></div>
+
+                <div class="question" id="occasionQuestion">
+                    <h3>Для какого случая?</h3>
+                    <div class="options">
+                        <button class="option-btn" data-value="alone">Одному</button>
+                        <button class="option-btn" data-value="date">Свидание</button>
+                        <button class="option-btn" data-value="friends">С друзьями</button>
+                        <button class="option-btn" data-value="family">С семьей</button>
+                    </div>
                 </div>
+
+                <div class="question" id="genreQuestion">
+                    <h3>Предпочитаемые жанры</h3>
+                    <div class="options">
+                        <button class="option-btn" data-value="action">Экшен</button>
+                        <button class="option-btn" data-value="comedy">Комедия</button>
+                        <button class="option-btn" data-value="drama">Драма</button>
+                        <button class="option-btn" data-value="horror">Ужасы</button>
+                        <button class="option-btn" data-value="romance">Романтика</button>
+                        <button class="option-btn" data-value="scifi">Фантастика</button>
+                    </div>
+                </div>
+
+                <button id="getRecommendationBtn" class="primary-btn">Получить рекомендацию</button>
             </div>
-            <div class="navigation-buttons">
-                <button class="button" onclick="location.reload()">Start Over</button>
-            </div>
+        </div>
+
+        <div id="results" class="results-section">
+            <!-- Results will be displayed here -->
+        </div>
+
+        <div id="movieDetails" class="movie-details">
+            <!-- Movie details will be displayed here -->
         </div>
     </div>
 
     <script src="{{ url_for('static', path='/js/main.js') }}"></script>
 </body>
 </html>
->>>>>>> cbda723206378d16e653ca843f407eb13924ca36
