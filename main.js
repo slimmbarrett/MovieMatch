@@ -1,169 +1,146 @@
+// TMDB API configuration
+const TMDB_API_KEY = 'your_api_key_here'; // Replace with your TMDB API key
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+
 document.addEventListener('DOMContentLoaded', () => {
-    const questions = document.querySelectorAll('.question');
-    const progressBar = document.querySelector('.progress');
-    const result = document.querySelector('.result');
-    const loading = document.querySelector('.loading');
-    
-    let currentQuestion = 0;
-    const answers = [];
+    const searchInput = document.getElementById('searchInput');
+    const searchButton = document.getElementById('searchButton');
+    const googleSearchButton = document.getElementById('googleSearchButton');
+    const getRecommendationBtn = document.getElementById('getRecommendationBtn');
+    const resultsSection = document.getElementById('results');
+    const optionButtons = document.querySelectorAll('.option-btn');
 
-    // Initialize progress bar
-    updateProgress();
+    // Handle regular movie search
+    searchButton.addEventListener('click', () => {
+        const query = searchInput.value.trim();
+        if (query) {
+            searchMovies(query);
+        }
+    });
 
-    // Add navigation buttons to each question
-    questions.forEach((question, index) => {
-        const navButtons = document.createElement('div');
-        navButtons.className = 'navigation-buttons';
-        
-        if (index > 0) {
-            const prevButton = document.createElement('button');
-            prevButton.className = 'button';
-            prevButton.textContent = 'Previous';
-            prevButton.onclick = () => navigateQuestion(-1);
-            navButtons.appendChild(prevButton);
+    // Handle Google search
+    googleSearchButton.addEventListener('click', () => {
+        const query = searchInput.value.trim();
+        if (query) {
+            const searchQuery = `${query} фильм смотреть`;
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, '_blank');
         }
-        
-        if (index < questions.length - 1) {
-            const nextButton = document.createElement('button');
-            nextButton.className = 'button';
-            nextButton.textContent = 'Next';
-            nextButton.onclick = () => {
-                if (validateQuestion(index)) {
-                    navigateQuestion(1);
-                }
-            };
-            navButtons.appendChild(nextButton);
-        } else {
-            const submitButton = document.createElement('button');
-            submitButton.className = 'button';
-            submitButton.textContent = 'Get Recommendation';
-            submitButton.onclick = () => {
-                if (validateQuestion(index)) {
-                    submitAnswers();
-                }
-            };
-            navButtons.appendChild(submitButton);
-        }
-        
-        question.appendChild(navButtons);
     });
 
     // Handle option selection
-    document.querySelectorAll('.button[data-option]').forEach(button => {
+    optionButtons.forEach(button => {
         button.addEventListener('click', () => {
-            const questionIndex = parseInt(button.closest('.question').dataset.question);
-            const siblings = button.parentElement.querySelectorAll('.button[data-option]');
+            // Find all buttons in the same question group
+            const questionDiv = button.closest('.question');
+            const buttonsInGroup = questionDiv.querySelectorAll('.option-btn');
             
-            siblings.forEach(sib => sib.classList.remove('selected'));
+            // Remove selected class from all buttons in group
+            buttonsInGroup.forEach(btn => btn.classList.remove('selected'));
+            
+            // Add selected class to clicked button
             button.classList.add('selected');
-            
-            answers[questionIndex] = button.dataset.option;
         });
     });
 
-    function validateQuestion(index) {
-        const question = questions[index];
-        
-        if (question.querySelector('.checkbox-group')) {
-            const checked = question.querySelectorAll('input[type="checkbox"]:checked');
-            if (checked.length === 0) {
-                alert('Please select at least one option');
-                return false;
-            }
-            if (index === 2 && checked.length > 3) {
-                alert('Please select up to 3 genres only');
-                return false;
-            }
-            answers[index] = Array.from(checked).map(cb => cb.value);
+    // Handle get recommendation button
+    getRecommendationBtn.addEventListener('click', () => {
+        const selectedOptions = {
+            mood: getSelectedValue('moodQuestion'),
+            occasion: getSelectedValue('occasionQuestion'),
+            genre: getSelectedValue('genreQuestion')
+        };
+
+        if (selectedOptions.mood && selectedOptions.occasion && selectedOptions.genre) {
+            getMovieRecommendation(selectedOptions);
         } else {
-            const selected = question.querySelector('.button.selected');
-            if (!selected) {
-                alert('Please select an option');
-                return false;
-            }
-            answers[index] = selected.dataset.option;
+            alert('Пожалуйста, выберите все критерии для получения рекомендации');
         }
-        
-        return true;
-    }
+    });
 
-    function navigateQuestion(direction) {
-        questions[currentQuestion].classList.remove('active');
-        currentQuestion += direction;
-        questions[currentQuestion].classList.add('active');
-        updateProgress();
-    }
-
-    function updateProgress() {
-        const progress = ((currentQuestion + 1) / questions.length) * 100;
-        progressBar.style.width = `${progress}%`;
-    }
-
-    async function submitAnswers() {
+    // Search for movies using the API
+    async function searchMovies(query) {
         try {
-            questions[currentQuestion].style.display = 'none';
-            loading.style.display = 'block';
-
-            const response = await fetch('/get-movie', {
+            const response = await fetch('/api/search', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ answers }),
+                body: JSON.stringify({ query })
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to get recommendation');
-            }
+            const data = await response.json();
+            displayResults(data.movies);
+        } catch (error) {
+            console.error('Error searching movies:', error);
+            resultsSection.innerHTML = '<p class="error">Произошла ошибка при поиске фильмов. Попробуйте позже.</p>';
+        }
+    }
+
+    // Get movie recommendation based on selected options
+    async function getMovieRecommendation(options) {
+        try {
+            const response = await fetch('/api/recommend', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    answers: [options.mood, options.occasion, options.genre]
+                })
+            });
 
             const data = await response.json();
-            displayResult(data);
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            displayResults([data]); // Display as single movie in results
         } catch (error) {
-            console.error('Error:', error);
-            alert('Error getting movie recommendation. Please try again.');
-            questions[currentQuestion].style.display = 'block';
-        } finally {
-            loading.style.display = 'none';
+            console.error('Error getting recommendation:', error);
+            resultsSection.innerHTML = '<p class="error">Произошла ошибка при получении рекомендации. Попробуйте позже.</p>';
         }
     }
 
-    function displayResult(movie) {
-        const movieTitle = document.getElementById('movie-title');
-        const moviePoster = document.getElementById('movie-poster');
-        const movieOverview = document.getElementById('movie-overview');
-        const movieRating = document.getElementById('movie-rating');
-        const movieReleaseDate = document.getElementById('movie-release-date');
-        const movieGenres = document.getElementById('movie-genres');
-        const watchProviders = document.getElementById('watch-providers');
+    // Helper function to get selected value from a question group
+    function getSelectedValue(questionId) {
+        const selectedButton = document.querySelector(`#${questionId} .option-btn.selected`);
+        return selectedButton ? selectedButton.dataset.value : null;
+    }
 
-        movieTitle.textContent = movie.title;
-        moviePoster.src = movie.poster_path || '/static/images/no-poster.png';
-        movieOverview.textContent = movie.overview;
-        movieRating.textContent = movie.vote_average ? `${movie.vote_average}/10` : 'N/A';
-        movieReleaseDate.textContent = movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A';
-
-        // Display genres
-        movieGenres.innerHTML = movie.genres
-            .map(genre => `<span class="genre-tag">${genre}</span>`)
-            .join('');
-
-        // Display watch providers
-        if (movie.watch_providers && Object.keys(movie.watch_providers).length > 0) {
-            const providers = [];
-            if (movie.watch_providers.flatrate) {
-                providers.push(...movie.watch_providers.flatrate.map(p => `<div class="provider-item">Stream on ${p.provider_name}</div>`));
-            }
-            if (movie.watch_providers.rent) {
-                providers.push(...movie.watch_providers.rent.map(p => `<div class="provider-item">Rent on ${p.provider_name}</div>`));
-            }
-            if (movie.watch_providers.buy) {
-                providers.push(...movie.watch_providers.buy.map(p => `<div class="provider-item">Buy on ${p.provider_name}</div>`));
-            }
-            watchProviders.innerHTML = providers.join('');
-        } else {
-            watchProviders.innerHTML = '<div class="provider-item">No streaming information available</div>';
+    // Display movie results
+    function displayResults(movies) {
+        if (!movies || movies.length === 0) {
+            resultsSection.innerHTML = '<p>Фильмы не найдены. Попробуйте другой запрос.</p>';
+            return;
         }
 
-        result.style.display = 'block';
+        resultsSection.innerHTML = movies.map(movie => `
+            <div class="movie-card">
+                ${movie.poster_path 
+                    ? `<img src="${TMDB_IMAGE_BASE_URL}${movie.poster_path}" alt="${movie.title}" class="movie-poster">`
+                    : '<div class="no-poster">Постер недоступен</div>'
+                }
+                <div class="movie-info">
+                    <h3 class="movie-title">${movie.title}</h3>
+                    <p class="movie-year">${movie.release_date ? movie.release_date.substring(0, 4) : 'N/A'}</p>
+                    ${movie.vote_average 
+                        ? `<span class="movie-rating">★ ${movie.vote_average.toFixed(1)}</span>`
+                        : ''
+                    }
+                    ${movie.overview 
+                        ? `<p class="movie-overview">${movie.overview}</p>`
+                        : ''
+                    }
+                </div>
+            </div>
+        `).join('');
     }
+
+    // Handle enter key in search input
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            searchButton.click();
+        }
+    });
 });
