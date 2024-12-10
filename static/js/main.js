@@ -1,169 +1,147 @@
+// TMDB API configuration
+const TMDB_API_KEY = 'your_api_key_here'; // Replace with your TMDB API key
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+
 document.addEventListener('DOMContentLoaded', () => {
-    const questions = document.querySelectorAll('.question');
-    const progressBar = document.querySelector('.progress');
-    const result = document.querySelector('.result');
-    const loading = document.querySelector('.loading');
+    // Elements
+    const searchInput = document.getElementById('movie-search');
+    const searchBtn = document.getElementById('search-btn');
+    const googleSearchBtn = document.getElementById('google-search-btn');
+    const searchResults = document.getElementById('search-results');
+    const getRecommendationBtn = document.getElementById('get-recommendation');
+    const recommendationResults = document.getElementById('recommendation-results');
     
-    let currentQuestion = 0;
-    const answers = [];
+    // Questions
+    const moodQuestion = document.getElementById('mood-question');
+    const occasionQuestion = document.getElementById('occasion-question');
+    const genreQuestion = document.getElementById('genre-question');
+    
+    let selectedMood = '';
+    let selectedOccasion = '';
+    let selectedGenre = '';
 
-    // Initialize progress bar
-    updateProgress();
-
-    // Add navigation buttons to each question
-    questions.forEach((question, index) => {
-        const navButtons = document.createElement('div');
-        navButtons.className = 'navigation-buttons';
-        
-        if (index > 0) {
-            const prevButton = document.createElement('button');
-            prevButton.className = 'button';
-            prevButton.textContent = 'Previous';
-            prevButton.onclick = () => navigateQuestion(-1);
-            navButtons.appendChild(prevButton);
+    // Search functionality
+    searchBtn.addEventListener('click', () => {
+        const query = searchInput.value.trim();
+        if (query) {
+            searchMovies(query);
         }
-        
-        if (index < questions.length - 1) {
-            const nextButton = document.createElement('button');
-            nextButton.className = 'button';
-            nextButton.textContent = 'Next';
-            nextButton.onclick = () => {
-                if (validateQuestion(index)) {
-                    navigateQuestion(1);
-                }
-            };
-            navButtons.appendChild(nextButton);
-        } else {
-            const submitButton = document.createElement('button');
-            submitButton.className = 'button';
-            submitButton.textContent = 'Get Recommendation';
-            submitButton.onclick = () => {
-                if (validateQuestion(index)) {
-                    submitAnswers();
-                }
-            };
-            navButtons.appendChild(submitButton);
-        }
-        
-        question.appendChild(navButtons);
     });
 
-    // Handle option selection
-    document.querySelectorAll('.button[data-option]').forEach(button => {
-        button.addEventListener('click', () => {
-            const questionIndex = parseInt(button.closest('.question').dataset.question);
-            const siblings = button.parentElement.querySelectorAll('.button[data-option]');
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const query = searchInput.value.trim();
+            if (query) {
+                searchMovies(query);
+            }
+        }
+    });
+
+    googleSearchBtn.addEventListener('click', () => {
+        const query = searchInput.value.trim();
+        if (query) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query + ' movie')}`, '_blank');
+        }
+    });
+
+    // Question navigation
+    document.querySelectorAll('.option-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const question = e.target.closest('.question');
+            const options = question.querySelectorAll('.option-btn');
             
-            siblings.forEach(sib => sib.classList.remove('selected'));
-            button.classList.add('selected');
-            
-            answers[questionIndex] = button.dataset.option;
+            options.forEach(opt => opt.classList.remove('selected'));
+            e.target.classList.add('selected');
+
+            if (question.id === 'mood-question') {
+                selectedMood = e.target.dataset.value;
+                moodQuestion.style.display = 'none';
+                occasionQuestion.style.display = 'block';
+            } else if (question.id === 'occasion-question') {
+                selectedOccasion = e.target.dataset.value;
+                occasionQuestion.style.display = 'none';
+                genreQuestion.style.display = 'block';
+            } else if (question.id === 'genre-question') {
+                selectedGenre = e.target.dataset.value;
+                getRecommendationBtn.style.display = 'block';
+            }
         });
     });
 
-    function validateQuestion(index) {
-        const question = questions[index];
-        
-        if (question.querySelector('.checkbox-group')) {
-            const checked = question.querySelectorAll('input[type="checkbox"]:checked');
-            if (checked.length === 0) {
-                alert('Please select at least one option');
-                return false;
-            }
-            if (index === 2 && checked.length > 3) {
-                alert('Please select up to 3 genres only');
-                return false;
-            }
-            answers[index] = Array.from(checked).map(cb => cb.value);
-        } else {
-            const selected = question.querySelector('.button.selected');
-            if (!selected) {
-                alert('Please select an option');
-                return false;
-            }
-            answers[index] = selected.dataset.option;
-        }
-        
-        return true;
-    }
+    // Get recommendation
+    getRecommendationBtn.addEventListener('click', () => {
+        getMovieRecommendation(selectedMood, selectedOccasion, selectedGenre);
+    });
 
-    function navigateQuestion(direction) {
-        questions[currentQuestion].classList.remove('active');
-        currentQuestion += direction;
-        questions[currentQuestion].classList.add('active');
-        updateProgress();
-    }
-
-    function updateProgress() {
-        const progress = ((currentQuestion + 1) / questions.length) * 100;
-        progressBar.style.width = `${progress}%`;
-    }
-
-    async function submitAnswers() {
+    async function searchMovies(query) {
         try {
-            questions[currentQuestion].style.display = 'none';
-            loading.style.display = 'block';
+            const response = await fetch(`/search?query=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                displayError(searchResults, data.error);
+                return;
+            }
+            
+            displayMovies(searchResults, data.results);
+        } catch (error) {
+            displayError(searchResults, 'Failed to search movies. Please try again.');
+        }
+    }
 
-            const response = await fetch('/get-movie', {
+    async function getMovieRecommendation(mood, occasion, genre) {
+        try {
+            const response = await fetch('/recommend', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ answers }),
+                body: JSON.stringify({ mood, occasion, genre })
             });
-
-            if (!response.ok) {
-                throw new Error('Failed to get recommendation');
-            }
-
+            
             const data = await response.json();
-            displayResult(data);
+            
+            if (data.error) {
+                displayError(recommendationResults, data.error);
+                return;
+            }
+            
+            displayMovies(recommendationResults, [data.recommendation]);
         } catch (error) {
-            console.error('Error:', error);
-            alert('Error getting movie recommendation. Please try again.');
-            questions[currentQuestion].style.display = 'block';
-        } finally {
-            loading.style.display = 'none';
+            displayError(recommendationResults, 'Failed to get recommendation. Please try again.');
         }
     }
 
-    function displayResult(movie) {
-        const movieTitle = document.getElementById('movie-title');
-        const moviePoster = document.getElementById('movie-poster');
-        const movieOverview = document.getElementById('movie-overview');
-        const movieRating = document.getElementById('movie-rating');
-        const movieReleaseDate = document.getElementById('movie-release-date');
-        const movieGenres = document.getElementById('movie-genres');
-        const watchProviders = document.getElementById('watch-providers');
+    function displayMovies(container, movies) {
+        container.innerHTML = '';
+        
+        movies.forEach(movie => {
+            const movieCard = document.createElement('div');
+            movieCard.className = 'movie-card';
+            
+            const posterPath = movie.poster_path
+                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                : null;
+            
+            movieCard.innerHTML = `
+                ${posterPath 
+                    ? `<img src="${posterPath}" alt="${movie.title}" class="movie-poster">`
+                    : `<div class="no-poster">No poster available</div>`
+                }
+                <div class="movie-info">
+                    <h3 class="movie-title">${movie.title}</h3>
+                    <p class="movie-year">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
+                    <span class="movie-rating">${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</span>
+                    <p class="movie-overview">${movie.overview || 'No overview available'}</p>
+                </div>
+            `;
+            
+            container.appendChild(movieCard);
+        });
+    }
 
-        movieTitle.textContent = movie.title;
-        moviePoster.src = movie.poster_path || '/static/images/no-poster.png';
-        movieOverview.textContent = movie.overview;
-        movieRating.textContent = movie.vote_average ? `${movie.vote_average}/10` : 'N/A';
-        movieReleaseDate.textContent = movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A';
-
-        // Display genres
-        movieGenres.innerHTML = movie.genres
-            .map(genre => `<span class="genre-tag">${genre}</span>`)
-            .join('');
-
-        // Display watch providers
-        if (movie.watch_providers && Object.keys(movie.watch_providers).length > 0) {
-            const providers = [];
-            if (movie.watch_providers.flatrate) {
-                providers.push(...movie.watch_providers.flatrate.map(p => `<div class="provider-item">Stream on ${p.provider_name}</div>`));
-            }
-            if (movie.watch_providers.rent) {
-                providers.push(...movie.watch_providers.rent.map(p => `<div class="provider-item">Rent on ${p.provider_name}</div>`));
-            }
-            if (movie.watch_providers.buy) {
-                providers.push(...movie.watch_providers.buy.map(p => `<div class="provider-item">Buy on ${p.provider_name}</div>`));
-            }
-            watchProviders.innerHTML = providers.join('');
-        } else {
-            watchProviders.innerHTML = '<div class="provider-item">No streaming information available</div>';
-        }
-
-        result.style.display = 'block';
+    function displayError(container, message) {
+        container.innerHTML = `<div class="error">${message}</div>`;
     }
 });
