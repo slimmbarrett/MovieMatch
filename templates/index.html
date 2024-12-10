@@ -4,164 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MovieMatch - Find Your Perfect Movie</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <header>
             <h1>MovieMatch</h1>
-            <p>Answer a few questions and we'll find the perfect movie for you!</p>
-        </div>
+            <p>Find your perfect movie match</p>
+        </header>
 
-        <div class="progress-bar">
-            <div class="progress"></div>
-        </div>
+        <section class="search-section">
+            <div class="search-container">
+                <input type="text" id="movie-search" placeholder="Search for a movie...">
+                <button id="search-btn">Search</button>
+                <button id="google-search-btn">Google Search</button>
+            </div>
+            <div id="search-results" class="results-section"></div>
+        </section>
 
-        <div class="question-container">
-            <!-- Question 1 -->
-            <div class="question active" data-question="0">
-                <h3>How are you today?</h3>
-                <div class="options-grid">
-                    <button class="button" data-option="Happy">Happy</button>
-                    <button class="button" data-option="Neutral">Neutral</button>
-                    <button class="button" data-option="Sad">Sad</button>
+        <section class="recommendation-section">
+            <h2>Get Personalized Recommendations</h2>
+            
+            <div class="question" id="mood-question">
+                <h3>How are you feeling today?</h3>
+                <div class="options">
+                    <button class="option-btn" data-value="happy">Happy</button>
+                    <button class="option-btn" data-value="sad">Sad</button>
+                    <button class="option-btn" data-value="excited">Excited</button>
+                    <button class="option-btn" data-value="relaxed">Relaxed</button>
+                    <button class="option-btn" data-value="romantic">Romantic</button>
                 </div>
             </div>
 
-            <!-- Question 2 -->
-            <div class="question" data-question="1">
-                <h3>What comes closest to your occasion?</h3>
-                <div class="options-grid">
-                    <button class="button" data-option="Just watching a movie by myself">Solo Movie Night</button>
-                    <button class="button" data-option="Movie Date">Movie Date</button>
-                    <button class="button" data-option="Movie Night with friends">Friends Movie Night</button>
-                    <button class="button" data-option="Date Night with boyfriend or girlfriend">Date Night</button>
-                    <button class="button" data-option="Watching a movie with family or relatives">Family Movie Night</button>
+            <div class="question" id="occasion-question" style="display: none;">
+                <h3>What's the occasion?</h3>
+                <div class="options">
+                    <button class="option-btn" data-value="alone">Solo Night</button>
+                    <button class="option-btn" data-value="date">Date Night</button>
+                    <button class="option-btn" data-value="family">Family Time</button>
+                    <button class="option-btn" data-value="friends">Friends Gathering</button>
                 </div>
             </div>
 
-            <!-- Question 3 -->
-            <div class="question" data-question="2">
-                <h3>Please choose up to 3 genres:</h3>
-                <div class="checkbox-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Action"> Action
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Adventure"> Adventure
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Animation"> Animation
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Comedy"> Comedy
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Crime"> Crime
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Documentary"> Documentary
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Drama"> Drama
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Family"> Family
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Fantasy"> Fantasy
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Horror"> Horror
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Mystery"> Mystery
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Romance"> Romance
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Sci-Fi"> Sci-Fi
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="Thriller"> Thriller
-                    </label>
+            <div class="question" id="genre-question" style="display: none;">
+                <h3>Choose your preferred genre</h3>
+                <div class="options">
+                    <button class="option-btn" data-value="action">Action</button>
+                    <button class="option-btn" data-value="comedy">Comedy</button>
+                    <button class="option-btn" data-value="drama">Drama</button>
+                    <button class="option-btn" data-value="horror">Horror</button>
+                    <button class="option-btn" data-value="romance">Romance</button>
+                    <button class="option-btn" data-value="scifi">Sci-Fi</button>
                 </div>
             </div>
 
-            <!-- Question 4 -->
-            <div class="question" data-question="3">
-                <h3>How old would you like the movie to be?</h3>
-                <div class="options-grid">
-                    <button class="button" data-option="Doesn't matter">Any Age</button>
-                    <button class="button" data-option="Published in the last 3 years">Last 3 Years</button>
-                    <button class="button" data-option="Published in the last 5 years">Last 5 Years</button>
-                    <button class="button" data-option="Published in the last 10 years">Last 10 Years</button>
-                    <button class="button" data-option="Published in the last 20 years">Last 20 Years</button>
-                </div>
-            </div>
-
-            <!-- Question 5 -->
-            <div class="question" data-question="4">
-                <h3>Is the age-appropriateness rating important?</h3>
-                <div class="options-grid">
-                    <button class="button" data-option="Yes">Yes</button>
-                    <button class="button" data-option="No">No</button>
-                </div>
-            </div>
-
-            <!-- Question 6 -->
-            <div class="question" data-question="5">
-                <h3>Select acceptable MPAA ratings:</h3>
-                <div class="checkbox-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="G"> G (General Audience)
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="PG"> PG (Parental Guidance)
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="PG-13"> PG-13 (Parental Guidance 13+)
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" value="R"> R (Restricted)
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <div class="loading">
-            <div class="loading-spinner"></div>
-            <p>Finding the perfect movie for you...</p>
-        </div>
-
-        <div class="result">
-            <div class="movie-card">
-                <div class="movie-header">
-                    <img id="movie-poster" class="movie-poster" src="" alt="Movie Poster">
-                    <div class="movie-info">
-                        <h2 id="movie-title"></h2>
-                        <div class="movie-meta">
-                            <span id="movie-release-date"></span>
-                            <span>|</span>
-                            <span id="movie-rating"></span>
-                        </div>
-                        <div id="movie-genres" class="movie-genres"></div>
-                        <p id="movie-overview" class="movie-overview"></p>
-                    </div>
-                </div>
-                <div class="watch-providers">
-                    <h3>Where to Watch</h3>
-                    <div id="watch-providers" class="provider-list"></div>
-                </div>
-            </div>
-            <div class="navigation-buttons">
-                <button class="button" onclick="location.reload()">Start Over</button>
-            </div>
-        </div>
+            <button id="get-recommendation" class="primary-btn" style="display: none;">Get Recommendation</button>
+            <div id="recommendation-results" class="results-section"></div>
+        </section>
     </div>
 
-    <script src="{{ url_for('static', path='/js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
